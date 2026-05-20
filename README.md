@@ -7,7 +7,7 @@ MENSAJE DEL CREADOR:
 Espero les guste este simple programa y les sirva para boostear su interacción con su comunidad :) Este programa es completamente gratuito y espero que llegue a las partes más randoms del mundo.
 ====================================
 
-Descarga el.zip: https://github.com/kgalvezgonzalezz/twitch-alertas-imagenes-v1.1/archive/refs/heads/main.zip
+Descarga el zip: https://github.com/kgalvezgonzalezz/twitch-alertas-imagenes-v1.1/archive/refs/heads/main.zip
 
 Para que este programa funcione correctamente en tu
 stream, solo sigue estos sencillos pasos:
