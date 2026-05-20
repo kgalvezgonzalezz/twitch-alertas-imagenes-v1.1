@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Moderación</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛠️</text></svg>">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e24;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Botón de Idioma (Arriba a la derecha) */
+        .btn-idioma {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #444;
+            color: white;
+            border: 2px solid #9146FF;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+        .btn-idioma:hover { background-color: #9146FF; }
+
+        .seccion {
+            background-color: #2b2b36;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        input {
+            width: 60%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-twitch { background-color: #9146FF; color: white; margin-left: 10px; }
+        .btn-twitch:hover { background-color: #772ce8; }
+        .btn-aprobar { background-color: #00e676; color: black; }
+        .btn-rechazar { background-color: #ff3d00; color: white; }
+        .btn-sonido { background-color: #555; color: white; font-size: 12px; margin-bottom: 10px;}
+        
+        #estado-conexion {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #ff4d4d;
+        }
+
+        #cola-revision { display: flex; flex-direction: column; gap: 15px; }
+        
+        .tarjeta-revision {
+            background-color: #18181b;
+            border-left: 5px solid #9146FF;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tarjeta-revision img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 5px;
+            margin: 10px 0;
+            object-fit: contain;
+        }
+        
+        .info-archivo {
+            background-color: #24242b;
+            width: 90%;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-align: left;
+            word-break: break-all;
+        }
+        .info-archivo p { margin: 5px 0; color: #cccccc; }
+        .info-archivo a { color: #00e676; text-decoration: none; }
+        .info-archivo a:hover { text-decoration: underline; }
+
+        .botones-accion { display: flex; gap: 10px; }
+
+        .marca-agua {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            color: #888888;
+            font-size: 14px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+        .marca-agua a { color: #9146FF; text-decoration: none; font-weight: bold; }
+        .marca-agua a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <button id="btnToggleLang" class="btn-idioma" onclick="cambiarIdioma()">ES</button>
+
+    <audio id="reproductorAudio" src="/alerta.mp3"></audio>
+    <button id="btnActivarSonido" class="btn-sonido" onclick="activarSonido()">🔊 Activar notificaciones sonoras</button>
+
+    <div class="seccion" style="border: 2px solid #9146FF;">
+        <h2 id="txtTituloTwitch">📡 Conexión a Twitch</h2>
+        <div style="display: flex; justify-content: center;">
+            <input type="text" id="inputCanal" placeholder="Ej: realproska">
+            <button id="btnConectar" class="btn-twitch" onclick="conectarCanal()">Conectar</button>
+        </div>
+        <div id="estado-conexion">🔴 Desconectado</div>
+    </div>
+
+    <div class="seccion">
+        <h2 id="txtTituloManual">🛠️ Forzar Imagen Manual</h2>
+        <div style="display: flex; justify-content: center;">
+            <input type="text" id="linkImagen" placeholder="Pega un link aquí...">
+            <button id="btnForzar" class="btn-twitch" onclick="forzarImagen()">Enviar a OBS</button>
+        </div>
+    </div>
+
+    <div class="seccion">
+        <h2 id="txtTituloCola">🛡️ Cola de Moderación</h2>
+        <div id="cola-revision">
+            <p id="txtColaVacia" style="color: #aaaaaa;">No hay imágenes pendientes. Esperando al chat...</p>
+        </div>
+    </div>
+
+    <div class="marca-agua">
+        <span id="txtCreado">Creado por</span> <a href="https://www.twitch.tv/realproska" target="_blank">@realproska</a><span id="txtGracias">, gracias por el apoyo :)</span>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // --- DICCIONARIO DE TRADUCCIONES ---
+        const i18n = {
+            es: {
+                btnToggleLang: "ES",
+                btnActivarSonido: "🔊 Activar notificaciones sonoras",
+                btnSonidoActivo: "✅ Sonido Activado",
+                txtTituloTwitch: "📡 Conexión a Twitch",
+                inputCanal: "Ej: realproska",
+                btnConectar: "Conectar",
+                txtTituloManual: "🛠️ Forzar Imagen Manual",
+                linkImagen: "Pega un link aquí...",
+                btnForzar: "Enviar a OBS",
+                txtTituloCola: "🛡️ Cola de Moderación",
+                txtColaVacia: "No hay imágenes pendientes. Esperando al chat...",
+                txtCreado: "Creado por",
+                txtGracias: ", gracias por el apoyo :)",
+                estadoDesconectado: "🔴 Desconectado",
+                estadoConectando: "⏳ Conectando...",
+                estadoConectado: "🟢 Conectado a: ",
+                quiereMostrar: "quiere mostrar esta imagen:",
+                enlaceBoton: "🔗 <strong>Enlace:</strong>",
+                pesoBoton: "📦 <strong>Peso aproximado:</strong>",
+                btnAprobar: "✅ Aprobar",
+                btnRechazar: "❌ Rechazar",
+                pesoDesconocido: "Desconocido"
+            },
+            en: {
+                btnToggleLang: "EN",
+                btnActivarSonido: "🔊 Enable sound notifications",
+                btnSonidoActivo: "✅ Sound Enabled",
+                txtTituloTwitch: "📡 Twitch Connection",
+                inputCanal: "e.g., realproska",
+                btnConectar: "Connect",
+                txtTituloManual: "🛠️ Manual Image Override",
+                linkImagen: "Paste a link here...",
+                btnForzar: "Send to OBS",
+                txtTituloCola: "🛡️ Moderation Queue",
+                txtColaVacia: "No pending images. Waiting for chat...",
+                txtCreado: "Created by",
+                txtGracias: ", thanks for the support :)",
+                estadoDesconectado: "🔴 Disconnected",
+                estadoConectando: "⏳ Connecting...",
+                estadoConectado: "🟢 Connected to: ",
+                quiereMostrar: "wants to show this image:",
+                enlaceBoton: "🔗 <strong>Link:</strong>",
+                pesoBoton: "📦 <strong>Approx. size:</strong>",
+                btnAprobar: "✅ Approve",
+                btnRechazar: "❌ Reject",
+                pesoDesconocido: "Unknown"
+            }
+        };
+
+        // --- SISTEMA DE IDIOMA ---
+        let idiomaActual = localStorage.getItem('panel_lang') || 'es';
+        let sonidoHabilitado = false;
+        let conectadoTwitch = false;
+        let canalActual = '';
+
+        function aplicarTextos() {
+            const t = i18n[idiomaActual];
+            document.getElementById('btnToggleLang').innerText = t.btnToggleLang;
+            document.getElementById('btnActivarSonido').innerText = sonidoHabilitado ? t.btnSonidoActivo : t.btnActivarSonido;
+            document.getElementById('txtTituloTwitch').innerText = t.txtTituloTwitch;
+            document.getElementById('inputCanal').placeholder = t.inputCanal;
+            document.getElementById('btnConectar').innerText = t.btnConectar;
+            document.getElementById('txtTituloManual').innerText = t.txtTituloManual;
+            document.getElementById('linkImagen').placeholder = t.linkImagen;
+            document.getElementById('btnForzar').innerText = t.btnForzar;
+            document.getElementById('txtTituloCola').innerText = t.txtTituloCola;
+            
+            if (document.getElementById('txtColaVacia')) {
+                document.getElementById('txtColaVacia').innerText = t.txtColaVacia;
+            }
+            
+            document.getElementById('txtCreado').innerText = t.txtCreado;
+            document.getElementById('txtGracias').innerText = t.txtGracias;
+
+            // Actualizar etiqueta de estado
+            const etiqueta = document.getElementById('estado-conexion');
+            if (conectadoTwitch) {
+                etiqueta.innerText = `${t.estadoConectado}${canalActual}`;
+            } else {
+                if (etiqueta.innerText.includes('⏳')) {
+                    etiqueta.innerText = t.estadoConectando;
+                } else {
+                    etiqueta.innerText = t.estadoDesconectado;
+                }
+            }
+        }
+
+        function cambiarIdioma() {
+            idiomaActual = (idiomaActual === 'es') ? 'en' : 'es';
+            localStorage.setItem('panel_lang', idiomaActual);
+            aplicarTextos();
+        }
+
+        // Aplicar idioma al abrir la página
+        aplicarTextos();
+
+        // --- RESTO DEL SISTEMA ---
+        const socket = io();
+        const colaContenedor = document.getElementById('cola-revision');
+        const reproductor = document.getElementById('reproductorAudio');
+        let solicitudesPendientes = 0;
+
+        function conectarCanal() {
+            const canal = document.getElementById('inputCanal').value.trim();
+            if (canal) {
+                const t = i18n[idiomaActual];
+                document.getElementById('estado-conexion').innerText = t.estadoConectando;
+                document.getElementById('estado-conexion').style.backgroundColor = "#ff9800";
+                socket.emit('guardar_canal', canal);
+            }
+        }
+
+        socket.on('estado_twitch', (datos) => {
+            const t = i18n[idiomaActual];
+            const etiqueta = document.getElementById('estado-conexion');
+            if (datos.conectado) {
+                conectadoTwitch = true;
+                canalActual = datos.canal;
+                etiqueta.innerText = `${t.estadoConectado}${datos.canal}`;
+                etiqueta.style.backgroundColor = "#00e676";
+                etiqueta.style.color = "black";
+                document.getElementById('inputCanal').value = datos.canal;
+            } else {
+                conectadoTwitch = false;
+                etiqueta.innerText = t.estadoDesconectado;
+                etiqueta.style.backgroundColor = "#ff4d4d";
+                etiqueta.style.color = "white";
+            }
+        });
+
+        function activarSonido() {
+            reproductor.play().then(() => {
+                reproductor.pause();
+                reproductor.currentTime = 0;
+                sonidoHabilitado = true;
+                const t = i18n[idiomaActual];
+                document.getElementById('btnActivarSonido').innerText = t.btnSonidoActivo;
+                document.getElementById('btnActivarSonido').style.backgroundColor = "#00e676";
+                document.getElementById('btnActivarSonido').style.color = "black";
+            }).catch(e => console.log("No se pudo activar el sonido", e));
+        }
+
+        function forzarImagen() {
+            const url = document.getElementById('linkImagen').value;
+            if (url) {
+                socket.emit('imagen_manual', url);
+                document.getElementById('linkImagen').value = ""; 
+            }
+        }
+
+        socket.on('nueva_revision', (datos) => {
+            reproductor.play().catch(e => console.log("Sonido bloqueado."));
+            if (solicitudesPendientes === 0) colaContenedor.innerHTML = ""; 
+            
+            solicitudesPendientes++;
+            const idTarjeta = `revision_${Date.now()}`;
+            const t = i18n[idiomaActual];
+
+            // Traducir "Desconocido" si viene del servidor
+            let pesoFinal = datos.peso === "Desconocido" ? t.pesoDesconocido : datos.peso;
+
+            const tarjetaHtml = `
+                <div class="tarjeta-revision" id="${idTarjeta}">
+                    <div><strong>${datos.usuario}</strong> (${datos.tipo}) ${t.quiereMostrar}</div>
+                    
+                    <img src="${datos.url}" alt="Preview" onerror="this.src=''; this.alt='⚠️ Error';">
+                    
+                    <div class="info-archivo">
+                        <p>${t.enlaceBoton} <a href="${datos.url}" target="_blank">${datos.url}</a></p>
+                        <p>${t.pesoBoton} ${pesoFinal}</p>
+                    </div>
+
+                    <div class="botones-accion">
+                        <button class="btn-aprobar" onclick="aprobar('${datos.url}', '${idTarjeta}')">${t.btnAprobar}</button>
+                        <button class="btn-rechazar" onclick="rechazar('${idTarjeta}')">${t.btnRechazar}</button>
+                    </div>
+                </div>
+            `;
+            colaContenedor.insertAdjacentHTML('beforeend', tarjetaHtml);
+        });
+
+        function aprobar(url, idTarjeta) { socket.emit('aprobar_imagen', url); removerTarjeta(idTarjeta); }
+        function rechazar(idTarjeta) { removerTarjeta(idTarjeta); }
+
+        function removerTarjeta(idTarjeta) {
+            const tarjeta = document.getElementById(idTarjeta);
+            if (tarjeta) tarjeta.remove();
+            solicitudesPendientes--;
+            if (solicitudesPendientes === 0) {
+                const t = i18n[idiomaActual];
+                colaContenedor.innerHTML = `<p id="txtColaVacia" style="color: #aaaaaa;">${t.txtColaVacia}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

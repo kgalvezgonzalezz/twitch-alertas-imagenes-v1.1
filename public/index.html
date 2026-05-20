@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Pantalla OBS</title>
+    <style>
+        /* El fondo debe ser transparente para que se vea tu stream en OBS */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: transparent; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        #imagen-obs {
+            width: 100%;  /* Fuerza a ocupar el 100% del ancho */
+            height: 100%; /* Fuerza a ocupar el 100% del alto */
+            object-fit: fill; /* Esta es la magia: estira y deforma sin piedad */
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <img id="imagen-obs" src="/predeterminado.png" onerror="this.style.display='none';">
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const imagen = document.getElementById('imagen-obs');
+        let temporizador;
+
+        // Cuando el servidor (el panel admin) envía una imagen aprobada
+        socket.on('show_image', (url) => {
+            // 1. Ocultamos la imagen actual suavemente
+            imagen.style.opacity = 0; 
+            
+            setTimeout(() => {
+                // 2. Cambiamos el link por la imagen del usuario
+                imagen.src = url; 
+                imagen.style.display = 'block';
+                // 3. La volvemos a mostrar
+                imagen.style.opacity = 1; 
+            }, 500); // Espera medio segundo de la animación
+
+            // Si ya había una imagen contando tiempo, cancelamos ese tiempo
+            clearTimeout(temporizador);
+
+            // 4. Iniciamos el contador de 10 minutos (600,000 milisegundos)
+            temporizador = setTimeout(() => {
+                // Volvemos a ocultar suavemente
+                imagen.style.opacity = 0;
+                
+                setTimeout(() => {
+                    // Restauramos la imagen de instrucciones
+                    imagen.src = '/predeterminado.png'; 
+                    imagen.style.opacity = 1;
+                }, 500);
+            }, 600000); // 600000 ms = 10 minutos
+        });
+    </script>
+</body>
+</html>
